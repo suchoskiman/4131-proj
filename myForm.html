@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <link rel="stylesheet" href="myStyle.css">
+        <title>My Weekly Events</title>
+        <meta charset="utf-8">
+        <meta name="author" content="Pierce Suchoski">
+
+        <script src="myForm.js"></script>
+    </head>
+
+    <body>
+      <h1>Enter new Event</h1>
+      <form action="http://localhost:5050" method="POST">
+        <table>
+          <tr>
+            <td><label for="event">Event</label></td>
+            <td><input type="text" id="event" name="event"></td>
+          </tr>
+
+          <tr>
+            <td><label for="day">Day</label></td>
+            <td>
+              <select name="day" id="day">
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+              </select>
+            </td>
+          </tr>
+
+          <tr>
+            <td><label for="start">Start</label></td>
+            <td><input type="time" id="start" name="start"></td>
+          </tr>
+
+          <tr>
+            <td><label for="end">End</label></td>
+            <td><input type="time" id="end" name="end"></td>
+          </tr>
+
+          <tr>
+            <td><label for="phone">Phone</label></td>
+            <td><input type="text" id="phone" name="phone"></td>
+          </tr>
+
+          <tr>
+            <td><label for="location">Location</label></td>
+            <td><input type="text" id="location" name="location"></td>
+          </tr>
+
+          <tr>
+            <td><label for="info">Info</label></td>
+            <td><input type="text" id="info" name="info"></td>
+          </tr>
+
+          <tr>
+            <td><label for="url">URL</label></td>
+            <td><input type="url" id="url" name="url"></td>
+          </tr>
+
+          <tr>
+            <td></td>
+            <td><input type="submit"></td>
+          </tr>
+        </table>
+      </form>
+    </body>
+</html>

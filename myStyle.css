@@ -1,0 +1,27 @@
+body {
+    background-color: #e3e2df;
+}
+
+table.event_table {
+    border-collapse: collapse;
+}
+
+th {
+    text-align: center;
+}
+
+.event_table td {
+    padding: 20px;
+}
+
+.event_table tr:nth-child(even) {
+    background-color: #ee4c7c;
+}
+
+.event_table tr:nth-child(odd) {
+    background-color: #e3afbc;
+}
+
+iframe {
+    border: 0px;
+}
