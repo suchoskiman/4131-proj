@@ -2,6 +2,7 @@
 # See https://docs.python.org/3.2/library/socket.html
 # for a decscription of python socket and its parameters
 import socket
+import re
 
 from threading import Thread
 from argparse import ArgumentParser
@@ -24,11 +25,9 @@ def send_header(response, fields, client_sock):
         send_header_fields(field, client_sock)
 
 def get_html(file, client_sock):
-    print('Getting HTML\n')
-
     header = []
     body = None
-    with open(file.removeprefix('/'), 'r') as fd:
+    with open('.' + file, 'r') as fd:
         body = bytes(fd.read(),  'utf-8')
     header.append('Content-Type:text/html')
     header.append('Content-Length:{}'.format(len(body)))
@@ -37,45 +36,35 @@ def get_html(file, client_sock):
     client_sock.send(bytes('\n', 'utf-8'))
     send_body(body, client_sock)
 
-    print('Done Getting HTML\n')
-
 def get_image(file, type, client_sock):
-    print('Getting Image\n')
-
     header = []
     body = None
-    with open(file.removeprefix('/'), 'rb') as fd:
+    with open('.' + file, 'rb') as fd:
         if type == 'png':
             header.append('Content-Type:image/png')
         else:
             header.append('Content-Type:image/jpeg')
         body = fd.read()
+
     header.append('Content-Length:{}'.format(len(body)))
 
     send_header(200, header, client_sock)
     client_sock.send(bytes('\n', 'utf-8'))
     send_body(body, client_sock)
-
-    print('Done Getting Image\n')
 
 def get_mp3(file, client_sock):
-    print('Getting MP3\n')
-
     header = []
     body = None
-    with open(file.removeprefix('/'), 'rb') as fd:
+    with open('.' + file, 'rb') as fd:
         body = fd.read()
-    header.append('Content-Type:audio/mpeg')
+    header.append('Content-Type:audio/mp3')
     header.append('Content-Length:{}'.format(len(body)))
 
     send_header(200, header, client_sock)
-    client_sock.send(bytes('\n', 'utf-8'))
+    client_sock.send(body)
     send_body(body, client_sock)
 
-    print('Done Getting MP3\n')
-
 def get(file, client_sock, client_addr):
-    print('GETTING', file)
     (name, sep, type) = file.partition('.')
     try:
         if type == 'png' or type == 'jpg':
@@ -89,28 +78,52 @@ def get(file, client_sock, client_addr):
         client_sock.send(bytes('Content-Type:text/HTML\n\n', 'utf-8'))
         with open('404.html', 'r') as fd:
             client_sock.send(bytes(fd.read(), 'utf-8'))
+    except PermissionError:
+        client_sock.send(bytes('HTTP/1.1 403\n', 'utf-8'))
+        client_sock.send(bytes('Content-Type:text/HTML\n\n', 'utf-8'))
+        with open('403.html', 'r') as fd:
+            client_sock.send(bytes(fd.read(), 'utf-8'))
 
+
+def check_header(header):
+    # if request is formatted correctly, should only yield 3 items
+    components = header.split()
+    if len(components) != 3:
+        raise ValueError()
+
+    # checks to make sure method is in correct format
+    method_p = re.compile('[A-Z]*')
+    if method_p.match(components[0]) == None:
+        raise ValueError()
+
+    # checks to make sure file is in right format
+    file_p = re.compile('/[\D_\&\+]*.*')
+    if file_p.match(components[1]) == None:
+        raise ValueError()
+
+    # checks to make sure using right protocol
+    if components[2] != 'HTTP/1.1':
+        raise ValueError()
 
 def head(file, client_sock, client_addr):
     (name, sep, type) = file.partition('.')
     try:
-        with open(file, 'rb') as fd:
+        with open('.' + file, 'rb') as fd:
             body = fd.read()
             header = []
             if type == 'jpg':
                 header.append('Content-Type:image/jpeg')
             elif type == 'png':
                 header.append('Content-Type:image/png')
-            elif type == html:
+            elif type == 'html':
                 header.append('Content-Type:text/html')
-            elif type == mp3:
+            elif type == 'mp3':
                 header.append('Content-Type:audio/mpeg')
 
             header.append('Content-Length:{}'.format(len(body)))
             send_header(200, header, client_sock)
     except FileNotFoundEror:
         send_response_code(404, client_sock)
-    print('HEAD request')
 
 def post(data, client_sock, client_addr):
     # finding form data in the request
@@ -127,7 +140,8 @@ def post(data, client_sock, client_addr):
         split = key_val.split('=')
         dct[split[0]] = split[1]
 
-    print(dct)
+    if len(dct) != 8:
+        raise ValueError()
 
     html_form_response = '''<!DOCTYPE html>
     <html>
@@ -173,32 +187,32 @@ def post(data, client_sock, client_addr):
         </table>
     </body>
     </html>
-    
-    '''.format(dct['event'], dct['day'], dct['start'], dct['end'], dct['phone'], dct['location'], dct['info'], dct['url'])
 
-    print(html_form_response)
+    '''.format(dct['event'], dct['day'], dct['start'], dct['end'], dct['phone'], dct['location'], dct['info'], dct['url'])
 
     html_form_response = bytes(html_form_response, 'utf-8')
 
     header_fields = ['Content-Type:text/html', 'Context-Legnth:{}'.format(len(html_form_response))]
     send_header(200, header_fields, client_sock)
     send_body(html_form_response, client_sock)
-    print('POST request')
 
 def handle_http_request(data, client_sock, client_addr):
     (header, sep, tail) = data.partition('\n')
     methods = dict(GET=get, HEAD=head, POST=post)
     print(header)
     print(tail)
+
     try:
         (method, file, protocol) = header.split(' ')
         if method in methods:
             if method == 'GET' or method == 'HEAD':
+                check_header(header)
                 methods[method](file, client_sock, client_addr)
             else:
+                check_header(header)
                 methods[method](tail, client_sock, client_addr)
         else:
-            client_sock.send(bytes('HTTP/1.1 405 Method not implemented\n'), 'utf-8')
+            client_sock.send(bytes('HTTP/1.1 405 Method not implemented\n', 'utf-8'))
     except ValueError:
         client_sock.send(bytes('HTTP/1.1 400 Bad Request\n', 'utf-8'))
 
